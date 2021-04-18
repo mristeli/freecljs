@@ -1,10 +1,10 @@
 # freecljs
 
-FIXME: Write a one-line description of your library/project.
+FreeCell implementation in ClojureScript made with 'lein new figwheel freecljs -- --reagent' and using CSS playing cards from https://github.com/selfthinker/CSS-Playing-Cards.
 
 ## Overview
 
-FIXME: Write a paragraph about the library/project and highlight its goals.
+No overview 
 
 ## Setup
 
@@ -34,8 +34,3 @@ And open your browser in `resources/public/index.html`. You will not
 get live reloading, nor a REPL. 
 
 ## License
-
-Copyright © 2014 FIXME
-
-Distributed under the Eclipse Public License either version 1.0 or (at your option) any later version.
-# freecljs
