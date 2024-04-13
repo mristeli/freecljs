@@ -12,11 +12,11 @@
 
 (defn move!
   [key index]
-  (if (empty? @move-state)
-    (reset! move-state [key index])
-    (do
-      (swap! game-state game/move :from @move-state :to [key index])
-      (reset! move-state []))))
+  (cond
+    (empty? @move-state) (reset! move-state [key index])
+    :else (do
+            (swap! game-state game/move :from @move-state :to [key index])
+            (reset! move-state []))))
 
 (defn rank-of-card [card]
   (let [lookup (flatten ["A" (map str (range 2 11)) "J" "Q" "K"])
@@ -63,16 +63,21 @@
   [:div {:style style}
    [:div {:class "cardSlot"}]])
             
+;; (defonce chosen-deck
+;;   :style (when (= @move-state [:decs index]) chosen-deck)
+
+;;   {:border-bottom "thick red"})
+
+
 (defn deck->html
   [x deck]
   (if (empty? deck)
     [deck-placeholder (deck-card-position-css x 0)]
-    (do
-      (print (str "Rerendering " deck " " x))
-      [:span
-       (for [[y card] (map-indexed vector (reverse deck))]
-         [:span {:key (str "card" x "x" y)} [card->html card x y]])
-       [:div {:style (deck-card-position-css x -1)} (str "Sequence " (count (game/sequence-in-deck deck)))]])))
+    [:span
+     (for [[y card] (map-indexed vector (reverse deck))]
+       [:span {:key (str "card" x "x" y)} [card->html card x y]])
+     [:div {:style (deck-card-position-css x 9)} (when (= @move-state [:decks x]) "VALITTU!")]
+     [:div {:style (deck-card-position-css x 10)} (str "Sequence " (count (game/sequence-in-deck deck)))]]))
 
 (defn fcell->html 
   [index card]
@@ -104,7 +109,7 @@
         [suit-deck->html index card]])
      (for [[index deck] (map-indexed vector decks)]
        [:div {:key (str "deck" index)
-              :on-click #(move! :decks index) }
+              :on-click #(move! :decks index)}
         [deck->html index deck]])]))
 
 (defn reset-game! []

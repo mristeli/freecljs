@@ -7,13 +7,13 @@
         face-value-prev (mod prev 13)
         suit-color-prev (mod (quot prev 13) 2)]
     (and (= 1 (- face-value-next face-value-prev))
-         (not (= suit-color-next suit-color-prev)))))
+         (not= suit-color-next suit-color-prev))))
 
 (defn- sequence-in-deck-reducer
   [sequence el]
   (if (or (empty? sequence)
           (next-in-sequence? (first sequence) el))
-    (cons el sequence)
+    (cons el sequence) ; bug here when this is the last step..
     (reduced (reverse sequence))))
 
 (defn sequence-in-deck
@@ -29,7 +29,7 @@
 
 (defn- init-decks
   []
-  (vec (map vec (reduce init-decks-reducer '() (shuffle (range 52))))))
+  (mapv vec (reduce init-decks-reducer '() (shuffle (range 52)))))
 
 (defn init
   "Return new game state"
@@ -55,18 +55,31 @@
 (defn moveable-count
   [state from to]
   (if (contains? #{:freecells :suitdecks} (first to)) 1
-      (let [empty-filter (partial filter #(empty? %))
-            max-moveable (* (+ (count (empty-filter (:freecells state))) 1) (+ (count (empty-filter (:decks state))) 1))
-            potential (take max-moveable (sequence-in-deck (get-in state from)))]
+      (let [empty-filter (partial filter empty?)
+            max-moveable (* (+ (count (empty-filter (:freecells state))) 1)
+                            (+ (count (empty-filter (:decks state)))
+                               (if (empty? (get-in state to)) 0 1)))
+            potential-taken (take max-moveable (sequence-in-deck (get-in state from)))
+            potential (cond-> potential-taken
+                        ;; reactive bug fix
+                        (= (count potential-taken) (count (get-in state from)))
+                        (reverse))]
         (if (empty? (get-in state to))
           (count potential)
-          (let [first-in-target (first (get-in state to))
-                get-index-of-valid (fn [_ next] (if (next-in-sequence? (second next) first-in-target) (reduced (+ (first next) 1)) 0))]
-            (reduce get-index-of-valid 0 (map-indexed vector potential)))))))
+          (let [target (get-in state to)
+                find-movable-amount (fn [_ [idx card]]
+                                      (if (next-in-sequence? card (first target))
+                                        (do (print [idx card])
+                                            (reduced (+ idx 1)))
+                                        0))
+                movable (reduce find-movable-amount
+                                0
+                                (map-indexed vector potential))]
+            movable)))))
 
 (defn move
-  [state & {:keys [from, to]}]
-  (if (not (valid-move? state from to))
+  [state & {:keys [from to]}]
+  (if-not (valid-move? state from to)
     state
     (let [to-deck (get-in state to)
           from-deck (get-in state from)
@@ -75,24 +88,5 @@
       (if (= max-cards 0)
         state
         (-> state
-            (assoc-in from (nthrest from-deck max-cards))
-            (assoc-in to (concat cards-to-move to-deck)))))))
-
-;; (defn move
-;;   [state from to]
-;;   (let [from-sequence (sequence-in-deck (get state from))]
-
-;;   ])
-
-;;   )
-
-
-
-;; (reduce init-decks-reducer '() (shuffle (zip (range 52))))
-
-;; (let
-;;  [deck (reduce init-decks-reducer '() (shuffle (range 52)))]
-;;   (print deck)
-;;   (map sequence-in-deck deck))
-
-;; (sequence-in-deck '(13 27))
+            (assoc-in from (vec (nthrest from-deck max-cards)))
+            (assoc-in to (vec (concat cards-to-move to-deck))))))))
